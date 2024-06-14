@@ -70,14 +70,14 @@ class Desx_Crypto(Crypto):
 
         ciphertext = bytearray(len(plaintext))
 
-        if (len(plaintext) % 8):
+        if len(plaintext) % 8:
             raise Exception("plaintext length must be a multiple of 8")
 
-        des = DES.new(str(key[0:8]), DES.MODE_CBC, str(bytearray(8))).encrypt
-        for i in range(len(plaintext)/8):
-            ciphertext[i*8:i*8+8] = strxor(output_whitening_key, des(strxor(input_whitening_key, str(plaintext[i*8:i*8+8]))))
+        des = DES.new(bytes(key[0:8]), DES.MODE_CBC, bytes(8)).encrypt
+        for i in range(len(plaintext)//8):
+            ciphertext[i*8:i*8+8] = strxor(output_whitening_key, des(strxor(input_whitening_key, bytes(plaintext[i*8:i*8+8]))))
 
-            des = DES.new(str(key[0:8]), DES.MODE_CBC, str(bytearray(8))).encrypt
+            des = DES.new(bytes(key[0:8]), DES.MODE_CBC, bytes(8)).encrypt
 
         return ciphertext
 
@@ -86,12 +86,12 @@ class Desx_Crypto(Crypto):
 
         plaintext = bytearray(len(ciphertext))
 
-        if (len(ciphertext) % 8):
+        if len(ciphertext) % 8:
             raise Exception("ciphertext length must be a multiple of 8")
 
-        des = DES.new(str(key[0:8]), DES.MODE_CBC, str(bytearray(8))).decrypt
-        for i in range(len(ciphertext)/8):
-            plaintext[i*8:i*8+8] = bytearray(strxor(input_whitening_key, des(strxor(output_whitening_key, str(ciphertext[i*8:i*8+8])))))
-            des = DES.new(str(key[0:8]), DES.MODE_CBC, str(bytearray(8))).decrypt
+        des = DES.new(bytes(key[0:8]), DES.MODE_CBC, (bytes(8))).decrypt
+        for i in range(len(ciphertext)//8):
+            plaintext[i*8:i*8+8] = bytearray(strxor(input_whitening_key, des(strxor(output_whitening_key, bytes(ciphertext[i*8:i*8+8])))))
+            des = DES.new(bytes(key[0:8]), DES.MODE_CBC, bytes(8)).decrypt
 
         return plaintext

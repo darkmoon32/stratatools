@@ -66,7 +66,7 @@ class Manager:
         # material id
         struct.pack_into("<d", eeprom, 0x08, material.get_id_from_name(cartridge.material_name))
         # manufacturing lot
-        struct.pack_into("<20s", eeprom, 0x10, str(cartridge.manufacturing_lot))
+        struct.pack_into("<20s", eeprom, 0x10, cartridge.manufacturing_lot.encode("utf-8"))
         # version (not sure)
         struct.pack_into("<H", eeprom, 0x24, cartridge.version)
         # manufacturing date
@@ -91,7 +91,7 @@ class Manager:
         # plaintext checksum
         struct.pack_into("<H", eeprom, 0x40, self.checksum.checksum(eeprom[0x00:0x40]))
         # key
-        struct.pack_into("<8s", eeprom, 0x48, str(cartridge.key_fragment.decode("hex")))
+        struct.pack_into("<8s", eeprom, 0x48, bytearray.fromhex(cartridge.key_fragment.decode()))
         # key checksum
         struct.pack_into("<H", eeprom, 0x50, self.checksum.checksum(eeprom[0x48:0x50]))
         # current material quantity
@@ -99,7 +99,7 @@ class Manager:
         # Checksum current material quantity
         struct.pack_into("<H", eeprom, 0x62, self.checksum.checksum(eeprom[0x58:0x60]))
         # signature (not sure, not usedu)
-        struct.pack_into("<9s", eeprom, 0x68, str(cartridge.signature))
+        struct.pack_into("<9s", eeprom, 0x68, cartridge.signature.encode("utf-8"))
 
         return eeprom
 
@@ -108,21 +108,21 @@ class Manager:
     #
     def unpack(self, cartridge_packed):
         # Validating plaintext checksum
-        if self.checksum.checksum(cartridge_packed[0x00:0x40]) != struct.unpack("<H", str(cartridge_packed[0x40:0x42]))[0]:
-            raise Exception("invalid content checksum: should have " + hex(struct.unpack("<H", str(cartridge_packed[0x40:0x42]))[0]) + " but have " + hex(self.checksum.checksum(cartridge_packed[0x00:0x40])))
+        if self.checksum.checksum(cartridge_packed[0x00:0x40]) != struct.unpack("<H", bytes(cartridge_packed[0x40:0x42]))[0]:
+            raise Exception("invalid content checksum: should have " + hex(struct.unpack("<H", bytes(cartridge_packed[0x40:0x42]))[0]) + " but have " + hex(self.checksum.checksum(cartridge_packed[0x00:0x40])))
 
         # Validating current material quantity checksum
-        if self.checksum.checksum(cartridge_packed[0x58:0x60]) != struct.unpack("<H", str(cartridge_packed[0x62:0x64]))[0]:
+        if self.checksum.checksum(cartridge_packed[0x58:0x60]) != struct.unpack("<H", bytes(cartridge_packed[0x62:0x64]))[0]:
             raise Exception("invalid current material quantity checksum")
 
-        cartridge_packed = buffer(cartridge_packed)
+        cartridge_packed = memoryview(cartridge_packed)
 
         # Serial number
         serial_number = struct.unpack_from("<d", cartridge_packed, 0x0)[0]
         # Material
         material_name = material.get_name_from_id(int(struct.unpack_from("<d", cartridge_packed, 0x08)[0]))
         # Manufacturing lot
-        manufacturing_lot = struct.unpack_from("<20s", cartridge_packed, 0x10)[0].split('\x00')[0]
+        manufacturing_lot = bytes(struct.unpack_from("<20s", cartridge_packed, 0x10)[0]).split(b'\x00')[0]
         # Manufacturing datetime
         (mfg_datetime_year,
             mfg_datetime_month,
@@ -154,7 +154,7 @@ class Manager:
         # Version
         version = struct.unpack_from("<H", cartridge_packed, 0x24)[0]
         # Key fragment
-        key_fragment = str(struct.unpack_from("<8s", cartridge_packed, 0x48)[0]).encode("hex")
+        key_fragment = struct.unpack_from("<8s", cartridge_packed, 0x48)[0].hex()
         # Current material quantity
         current_material_quantity = struct.unpack_from("<d", cartridge_packed, 0x58)[0]
         # Signature
@@ -168,7 +168,7 @@ class Manager:
         c.last_use_date.FromDatetime(use_datetime)
         c.initial_material_quantity = initial_material_quantity
         c.current_material_quantity = current_material_quantity
-        c.key_fragment = key_fragment
+        c.key_fragment = key_fragment.encode("utf8")
         c.version = version
         c.signature = signature
 
@@ -186,11 +186,11 @@ class Manager:
         # Build the key
         key = self.build_key(cartridge_packed[0x48:0x50], machine_number, eeprom_uid)
         # Encrypt content
-        struct.pack_into("<64s", cartridge_crypted, 0x00, str(self.crypto.encrypt(key, cartridge_packed[0x00:0x40])))
+        struct.pack_into("<64s", cartridge_crypted, 0x00, bytes(self.crypto.encrypt(key, cartridge_packed[0x00:0x40])))
         # Checksum crypted content
         struct.pack_into("<H", cartridge_crypted, 0x46, self.checksum.checksum(cartridge_packed[0x00:0x40]))
         # Encrypt current material quantity
-        struct.pack_into("<8s", cartridge_crypted, 0x58, str(self.crypto.encrypt(key, cartridge_packed[0x58:0x60])))
+        struct.pack_into("<8s", cartridge_crypted, 0x58, bytes(self.crypto.encrypt(key, cartridge_packed[0x58:0x60])))
         # Checksum crypted current material quantity
         struct.pack_into("<H", cartridge_crypted, 0x60, self.checksum.checksum(cartridge_packed[0x58:0x60]))
 
@@ -208,12 +208,12 @@ class Manager:
         # Build the key
         key = self.build_key(cartridge_crypted[0x48:0x50], machine_number, eeprom_uid)
         # Validate crypted content checksum
-        if self.checksum.checksum(cartridge_crypted[0x00:0x40]) != struct.unpack("<H", str(cartridge_crypted[0x46:0x48]))[0]:
+        if self.checksum.checksum(cartridge_crypted[0x00:0x40]) != struct.unpack("<H", cartridge_crypted[0x46:0x48])[0]:
             raise Exception("invalid crypted content checksum")
         # Decrypt content
         cartridge_packed[0x00:0x40] = self.crypto.decrypt(key, cartridge_crypted[0x00:0x40])
         # Validate crypted current material quantity checksum
-        if self.checksum.checksum(cartridge_crypted[0x58:0x60]) != struct.unpack("<H", str(cartridge_crypted[0x60:0x62]))[0]:
+        if self.checksum.checksum(cartridge_crypted[0x58:0x60]) != struct.unpack("<H", bytes(cartridge_crypted[0x60:0x62]))[0]:
             raise Exception("invalid current material quantity checksum")
         # Decrypt current material quantity
         cartridge_packed[0x58:0x60] = self.crypto.decrypt(key, cartridge_crypted[0x58:0x60])

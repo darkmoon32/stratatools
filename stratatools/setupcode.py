@@ -287,23 +287,23 @@ class SetupcodeEncoder():
         checksum = self._checksum(code)
 
         if expected_checksum != checksum:
-            raise(Exception("invalid checksum, expected <" + str(expected_checksum) + "> but computed <" + str(checksum) + ">"))
+            raise(Exception("invalid checksum, expected <" + bytes(expected_checksum) + "> but computed <" + bytes(checksum) + ">"))
 
         code_type = (code[13] & 0x03)
         if code_type not in (0x0, 0x01, 0x02, 0x03):
-            raise(Exception("invalid code type < " + str(hex(code[13] & 0x03)) + ">"))
+            raise(Exception("invalid code type < " + bytes(hex(code[13] & 0x03)) + ">"))
 
         s = Setupcode()
-        s.serial_number = "".join(str(c) for c in [code[0], code[6], code[12], code[18]])
+        s.serial_number = "".join(bytes(c) for c in [code[0], code[6], code[12], code[18]])
         s.system_type = SystemType.from_id(int(code[1] & 0x0F))
         s.envelope_size = EnvelopeSize.from_id(code[2] & 0x03)
         s.build_speed = BuildSpeed.from_id(code[3] & 0x03)
-        s.checksum_1 = str(code[7])
-        s.checksum_2 = str(code[8])
-        s.version = str(code[13] & 0x03)
-        s.material = self._get_enabled_material(self._decode_material(code)) + "(" + str(self._decode_material(code)) + ")"
+        s.checksum_1 = bytes(code[7])
+        s.checksum_2 = bytes(code[8])
+        s.version = bytes(code[13] & 0x03)
+        s.material = self._get_enabled_material(self._decode_material(code)) + "(" + bytes(self._decode_material(code)) + ")"
         s.code_type = CodeType.from_id(code[15] & 0x03)
-        s.key = str(self.dictionary.index(setup_code[17]))
+        s.key = bytes(self.dictionary.index(setup_code[17]))
 
         return s
 
@@ -423,7 +423,7 @@ class SetupcodeEncoder():
             shift_base = (shift_base - 0x20) & 0xff
             error = error + 1
             if error > 5 :
-                raise "error > 5 :("
+                raise Exception("error > 5 :(")
 
         for i in [0, 1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 18]:
             position = self._dict_get_position(setup_code[i])

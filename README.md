@@ -21,8 +21,8 @@ $ pip2 install stratatools
 or from source:
 
 ```
-$ python2 ./setup.py build
-$ python2 ./setup.py install
+$ python3 ./setup.py build
+$ python3 ./setup.py install
 ```
 
 It will automagically pull the dependency:

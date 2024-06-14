@@ -23,7 +23,7 @@ def get_machine_types():
     return type_to_number.keys()
 
 def get_number_from_type(type):
-    return type_to_number[type].decode("hex")
+    return bytes.fromhex(type_to_number[type])
 
 def get_type_from_number(number):
     if len(number_to_type) == 0:

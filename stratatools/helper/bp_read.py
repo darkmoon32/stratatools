@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # Copyright (c) 2014, Benjamin Vanheuverzwijn <bvanheu@gmail.com>
 # All rights reserved.

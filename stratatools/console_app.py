@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 #
 # See the LICENSE file
@@ -45,7 +45,7 @@ class StratatoolsConsoleApp():
         eeprom_encode.add_argument("-D", "--diag-format", action="store_true", dest="diag_format", help="Produce output in the ASCII format used over the printer diagnostic port")
         eeprom_encode.add_argument("-a", "--use-ascii", action="store_true", dest="use_ascii", help="Use ASCII format for output file")
         eeprom_encode.add_argument('input_file', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
-        eeprom_encode.add_argument('output_file', nargs='?', type=argparse.FileType('w'), default=sys.stdout)
+        eeprom_encode.add_argument('output_file', nargs='?', type=argparse.FileType('wb'), default=sys.stdout)
         eeprom_encode.set_defaults(func=self.command_eeprom_encode)
 
         # EEPROM decode options
@@ -53,7 +53,7 @@ class StratatoolsConsoleApp():
         eeprom_decode.add_argument("-t", "--machine-type", action="store", choices=machine.get_machine_types(), help="Machine type (Fox T-class, Prodigy P-class, Quantum, uPrint, uPrint SE)", required=True)
         eeprom_decode.add_argument("-e", "--eeprom-uid", action="store", dest="eeprom_uid", required=True, help="Format: [a-f0-9]{14}23, example: 11010a01ba325d23")
         eeprom_decode.add_argument("-D", "--diag-format", action="store_true", dest="diag_format", help="Read input in the ASCII format used over the printer diagnostic port")
-        eeprom_decode.add_argument('input_file', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
+        eeprom_decode.add_argument('input_file', nargs='?', type=argparse.FileType('rb'), default=sys.stdin)
         eeprom_decode.add_argument('output_file', nargs='?', type=argparse.FileType('w'), default=sys.stdout)
         eeprom_decode.set_defaults(func=self.command_eeprom_decode)
 
@@ -108,7 +108,7 @@ class StratatoolsConsoleApp():
         machine_number = machine.get_number_from_type(args.machine_type)
 
         m = manager.Manager(crypto.Desx_Crypto(), checksum.Crc16_Checksum())
-        eeprom = m.encode(machine_number, args.eeprom_uid.decode("hex"), cartridge)
+        eeprom = m.encode(machine_number, bytes.fromhex(args.eeprom_uid), cartridge)
 
         if args.use_ascii:
             eeprom = self._make_ascii(cartridge, eeprom, args.eeprom_uid, args.machine_number)
@@ -128,7 +128,7 @@ class StratatoolsConsoleApp():
 
         m = manager.Manager(crypto.Desx_Crypto(), checksum.Crc16_Checksum())
         machine_number = machine.get_number_from_type(args.machine_type)
-        cartridge = m.decode(machine_number, args.eeprom_uid.decode("hex"), bytearray(cartridge_crypted))
+        cartridge = m.decode(machine_number, bytes.fromhex(args.eeprom_uid), bytearray(cartridge_crypted))
 
         args.output_file.write((MessageToString(cartridge)))
 
@@ -186,7 +186,7 @@ class StratatoolsConsoleApp():
         for k in range(len(material.id_to_name)):
             m = material.id_to_name[k]
             if m != "unknown":
-                print(str(k) + "\t" + m)
+                print(bytes(k) + "\t" + m)
 
     def command_setupcode_create(self, args):
         encoder = SetupcodeEncoder()
